@@ -1,0 +1,67 @@
+{
+    "ModId": "ff16.ability.tierThreeFeats",
+    "ModName": "Reflection Upgrades for Mastered Feats",
+    "ModAuthor": "Recoome",
+    "ModVersion": "1.0.0",
+    "ModDescription": "Adds a third upgrade level for eikon feats, applying the \"reflection of x\" item upgrades",
+    "ModDll": "ff16.ability.tierThreeFeats.dll",
+    "ModR2RManagedDll32": "x86/ff16.ability.tierThreeFeats.dll",
+    "ModR2RManagedDll64": "x64/ff16.ability.tierThreeFeats.dll",
+    "ModNativeDll32": "",
+    "ModNativeDll64": "",
+    "Tags": [],
+    "CanUnload": null,
+    "HasExports": null,
+    "IsLibrary": false,
+    "ReleaseMetadataFileName": "ff16.ability.tierThreeFeats.ReleaseMetadata.json",
+    "PluginData": {
+        "GitHubDependencies": {
+            "IdToConfigMap": {
+                "Reloaded.Memory.SigScan.ReloadedII": {
+                    "Config": {
+                        "UserName": "Reloaded-Project",
+                        "RepositoryName": "Reloaded.Memory.SigScan",
+                        "UseReleaseTag": false,
+                        "AssetFileName": "Mod.zip"
+                    },
+                    "ReleaseMetadataName": "Reloaded.Memory.SigScan.ReloadedII.ReleaseMetadata.json"
+                },
+                "reloaded.sharedlib.hooks": {
+                    "Config": {
+                        "UserName": "Sewer56",
+                        "RepositoryName": "Reloaded.SharedLib.Hooks.ReloadedII",
+                        "UseReleaseTag": true,
+                        "AssetFileName": "reloaded.sharedlib.hooks.zip"
+                    },
+                    "ReleaseMetadataName": "Sewer56.Update.ReleaseMetadata.json"
+                },
+                "SharedScans.Reloaded": {
+                    "Config": {
+                        "UserName": "RyoTune",
+                        "RepositoryName": "SharedScans",
+                        "UseReleaseTag": false,
+                        "AssetFileName": "Mod.zip"
+                    },
+                    "ReleaseMetadataName": "SharedScans.Reloaded.ReleaseMetadata.json"
+                }
+            }
+        },
+        "GitHubRelease": {
+            "UserName": "Ronserruya",
+            "RepositoryName": "ff16.ability.tierThreeFeats",
+            "UseReleaseTag": true,
+            "AssetFileName": "Mod.zip"
+        }
+    },
+    "IsUniversalMod": false,
+    "ModDependencies": [
+        "Reloaded.Memory.SigScan.ReloadedII",
+        "reloaded.sharedlib.hooks",
+        "SharedScans.Reloaded"
+    ],
+    "OptionalDependencies": [],
+    "SupportedAppId": [
+        "ffxvi.exe"
+    ],
+    "ProjectUrl": "https://github.com/Ronserruya/ff16.ability.tierThreeFeats"
+}

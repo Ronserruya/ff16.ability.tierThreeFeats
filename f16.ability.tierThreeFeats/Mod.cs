@@ -1,10 +1,27 @@
-﻿using Reloaded.Hooks.ReloadedII.Interfaces;
-using Reloaded.Mod.Interfaces;
+﻿using Reloaded.Mod.Interfaces;
 using ff16.ability.tierThreeFeats.Template;
-using SharedScans.Interfaces;
 using System.Diagnostics;
+using Reloaded.Memory.SigScan.ReloadedII.Interfaces;
+
+using IReloadedHooks = Reloaded.Hooks.ReloadedII.Interfaces.IReloadedHooks;
+using Reloaded.Hooks.Definitions;
+using Reloaded.Memory.Interfaces;
 
 namespace ff16.ability.tierThreeFeats;
+
+public static class Extensions
+{
+    public static void AddScan(this IStartupScanner scans, string pattern, Action<nint> action)
+    {
+        var baseAddress = Process.GetCurrentProcess().MainModule!.BaseAddress;
+        scans!.AddMainModuleScan(pattern, result =>
+        {
+            if (!result.Found)
+                throw new Exception($"Scan unable to find pattern: {pattern}!");
+            action(result.Offset + baseAddress);
+        });
+    }
+}
 
 /// <summary>
 /// Your mod logic goes here.
@@ -38,13 +55,16 @@ public class Mod : ModBase // <= Do not Remove.
     private readonly IModConfig _modConfig;
 
     public unsafe delegate char HasEquipItemDelegate(long a1, int itemId);
-    private HookContainer<HasEquipItemDelegate> _hasEquipItem;
+    private IHook<HasEquipItemDelegate> _hasEquipItem;
 
     public delegate char HasDlcDelegate(long a1, uint dlcId);
-    private HookContainer<HasDlcDelegate> _hasDLC;
+    private IHook<HasDlcDelegate> _hasDLC;
+
+    //public unsafe delegate long SerDel(long a1, long a2, long a3, long fileName, char asXml);
+    //private IHook<SerDel> serialize;
 
     public unsafe delegate long GetSkillUpgradeLevelDelegate(long a1, uint skillId);
-    private WrapperContainer<GetSkillUpgradeLevelDelegate> _getSkillUpgradeLevel;
+    private GetSkillUpgradeLevelDelegate _getSkillUpgradeLevel;
     private long skillLevelThingyAddress;
 
     private bool foundDLC = false;
@@ -61,6 +81,8 @@ public class Mod : ModBase // <= Do not Remove.
         { 100622, 49 }, // Odin
     };
 
+    private static IStartupScanner? _startupScanner = null!;
+
     public Mod(ModContext context)
     {
         _modLoader = context.ModLoader;
@@ -71,8 +93,8 @@ public class Mod : ModBase // <= Do not Remove.
 
 
         _logger.WriteLine($"[{_modConfig.ModId}] Initializing...", _logger.ColorGreen);
-        var sharedScansController = _modLoader.GetController<ISharedScans>();
-        if (sharedScansController == null || !sharedScansController.TryGetTarget(out ISharedScans scans))
+        var scansController = _modLoader.GetController<IStartupScanner>();
+        if (scansController == null || !scansController.TryGetTarget(out IStartupScanner scans))
         {
             throw new Exception($"[{_modConfig.ModId}] Unable to get ISharedScans!");
         }
@@ -83,24 +105,31 @@ public class Mod : ModBase // <= Do not Remove.
         _logger.WriteLine($"[{_modConfig.ModId}] Finished Initalization!", _logger.ColorGreen);
     }
 
-    private unsafe void SetupScans(ISharedScans scans)
+    private unsafe void SetupScans(IStartupScanner scans)
     {
-        scans.AddScan<GetSkillUpgradeLevelDelegate>("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 20 57 41 56 41 57 48 83 EC 20 48 8B 05 9D");
-        scans.AddScan<HasEquipItemDelegate>("48 89 5C 24 ?? 48 89 4C 24 ?? 57 48 83 EC ?? 8B DA");
-        scans.AddScan<HasDlcDelegate>("48 89 5C 24 ?? 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 33 DB 8B FA 48 85 C0 75 ?? 48 8B 0D ?? ?? ?? ?? 48 85 C9 0F 84");
+        scans.AddScan("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 20 57 41 56 41 57 48 83 EC 20 48 8B 05 9D", address =>
+        {
+            _getSkillUpgradeLevel = _hooks!.CreateWrapper<GetSkillUpgradeLevelDelegate>(address, out _);
+        });
 
-        _getSkillUpgradeLevel = scans.CreateWrapper<GetSkillUpgradeLevelDelegate>(_modConfig.ModId);
-        _hasEquipItem = scans.CreateHook<HasEquipItemDelegate>(HasEquipItemImpl, _modConfig.ModId);
-        _hasDLC = scans.CreateHook<HasDlcDelegate>(HasDlcImpl, _modConfig.ModId);
+        scans.AddScan("48 89 5C 24 ?? 48 89 4C 24 ?? 57 48 83 EC ?? 8B DA", address =>
+        {
+            _hasEquipItem = _hooks!.CreateHook<HasEquipItemDelegate>(HasEquipItemImpl, address).Activate();
+        });
+
+        scans.AddScan("48 89 5C 24 ?? 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 33 DB 8B FA 48 85 C0 75 ?? 48 8B 0D ?? ?? ?? ?? 48 85 C9 0F 84", address =>
+        {
+            _hasDLC = _hooks!.CreateHook<HasDlcDelegate>(HasDlcImpl, address).Activate();
+        });
     }
 
     private unsafe char HasEquipItemImpl(long a1, int itemId)
     {
         bool skillMastered = false;
-        bool itemEquipped = _hasEquipItem.Hook!.OriginalFunction(a1, itemId) == 1;
+        bool itemEquipped = _hasEquipItem.OriginalFunction(a1, itemId) == 1;
         if (reflectionItemToSkill.TryGetValue(itemId, out uint skillId))
         {
-            skillMastered = foundDLC && (_getSkillUpgradeLevel.Wrapper.Invoke(*(long*)skillLevelThingyAddress, skillId) == 3);
+            skillMastered = foundDLC && (_getSkillUpgradeLevel(*(long*)skillLevelThingyAddress, skillId) == 3);
         }
 
         return (char)((itemEquipped || skillMastered) ? 1 : 0);
@@ -108,7 +137,7 @@ public class Mod : ModBase // <= Do not Remove.
 
     private char HasDlcImpl(long a1, uint dlcId)
     {
-        var res = _hasDLC.Hook!.OriginalFunction(a1, dlcId);
+        var res = _hasDLC.OriginalFunction(a1, dlcId);
 
         if (dlcId == 3)
         {

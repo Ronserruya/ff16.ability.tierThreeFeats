@@ -2,7 +2,7 @@
     "ModId": "ff16.ability.tierThreeFeats",
     "ModName": "Reflection Upgrades for Mastered Feats",
     "ModAuthor": "Recoome",
-    "ModVersion": "1.0.1",
+    "ModVersion": "1.0.2",
     "ModDescription": "Adds a third upgrade level for eikon feats, applying the \"reflection of x\" item upgrades",
     "ModDll": "ff16.ability.tierThreeFeats.dll",
     "ModR2RManagedDll32": "x86/ff16.ability.tierThreeFeats.dll",
